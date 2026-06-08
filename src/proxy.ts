@@ -1,5 +1,6 @@
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
 const AUTH_PAGES = ["/login", "/register"];
 const PUBLIC_PAGES = ["/", ...AUTH_PAGES];
@@ -22,46 +23,46 @@ function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => matchesPath(pathname, prefix));
 }
 
-function redirectToLogin(req: NextRequest, callbackPath?: string) {
-  const loginUrl = new URL("/login", req.url);
+export default withAuth(
+  function proxy(req: NextRequestWithAuth) {
+    const { pathname } = req.nextUrl;
+    const isAuthenticated = !!req.nextauth.token;
 
-  if (callbackPath) {
-    loginUrl.searchParams.set("callbackUrl", callbackPath);
-  }
+    if (isAuthenticated && isAuthPage(pathname)) {
+      const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+      const isSafeCallback =
+        callbackUrl &&
+        callbackUrl.startsWith("/") &&
+        !AUTH_PAGES.some((page) => matchesPath(callbackUrl, page));
 
-  return NextResponse.redirect(loginUrl);
-}
-
-export default async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const token = await getToken({ req });
-  const isAuthenticated = !!token && !token.error;
-
-  if (isAuthenticated && isAuthPage(pathname)) {
-    const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
-    const isSafeCallback =
-      callbackUrl &&
-      callbackUrl.startsWith("/") &&
-      !AUTH_PAGES.some((page) => matchesPath(callbackUrl, page));
-
-    const destination = isSafeCallback ? callbackUrl : "/";
-    return NextResponse.redirect(new URL(destination, req.url));
-  }
-
-  if (isProtectedPage(pathname)) {
-    if (!isAuthenticated) {
-      return redirectToLogin(req, pathname);
+      const destination = isSafeCallback ? callbackUrl : "/";
+      return NextResponse.redirect(new URL(destination, req.url));
     }
 
     return NextResponse.next();
-  }
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
 
-  if (isPublicPage(pathname)) {
-    return NextResponse.next();
-  }
+        if (isPublicPage(pathname)) {
+          return true;
+        }
 
-  return NextResponse.next();
-}
+        if (isProtectedPage(pathname)) {
+          return !!token;
+        }
+
+        return true;
+      },
+    },
+    pages: {
+      signIn: "/login",
+    },
+    secret: process.env.NEXTAUTH_SECRET,
+  },
+);
 
 export const config = {
   matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"],

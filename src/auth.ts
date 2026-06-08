@@ -3,9 +3,13 @@ import Credentials from "next-auth/providers/credentials";
 import { AuthApiResponse, AuthSuccessResponse } from "./lib/types/auth";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+  },
   pages: {
-    signIn: "/",
-    error: "/",
+    signIn: "/login",
+    error: "/login",
   },
 
   providers: [
