@@ -142,7 +142,7 @@ This project was built against the following criteria:
 
 ## Demo Credentials
 
-Register a new account on the [live demo](https://electro-pi-store.netlify.app/register), or use any valid credentials from the Route E-Commerce API.
+Register a new account on the [live demo](https://electro-pi-store.netlify.app/), or use any valid credentials from the Route E-Commerce API.
 
 ## License
 
