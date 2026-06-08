@@ -61,7 +61,7 @@ export default function LoginWrapper() {
 
     setErrorMessage(null);
     toast.success("Successfully logged in");
-    const callbackUrl = new URLSearchParams(location.search).get("callbackUrl") || "/products";
+    const callbackUrl = new URLSearchParams(location.search).get("callbackUrl") || "/";
     location.href = callbackUrl;
   };
 
